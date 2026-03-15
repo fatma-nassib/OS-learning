@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS 334 - OS Interactive Study System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sidebar:260px;
+  --hdr:58px;
+  --bg:#F0F4F8;
+  --card:#FFFFFF;
+  --border:#DDE3EB;
+  --text:#1A202C;
+  --muted:#6B7280;
+  --correct:#065F46;
+  --correct-bg:#D1FAE5;
+  --wrong:#991B1B;
+  --wrong-bg:#FEE2E2;
+  --accent:#2E5EAA;
+  --radius:8px;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+#hdr{height:var(--hdr);background:#1F3864;display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
+#hdr h1{color:#fff;font-size:1.15rem;font-weight:700;letter-spacing:.5px}
+#hdr .subtitle{color:#90AACC;font-size:.8rem;margin-left:auto}
+#progress-bar-wrap{width:180px;height:8px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden}
+#progress-bar{height:100%;background:#52B788;transition:width .4s;width:0%}
+
+/* LAYOUT */
+#layout{display:flex;flex:1;overflow:hidden;height:calc(100vh - var(--hdr))}
+
+/* SIDEBAR */
+#sidebar{width:var(--sidebar);background:#FFFFFF;border-right:2px solid var(--border);overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column}
+#sidebar-inner{padding:12px 0;flex:1}
+.sidebar-label{font-size:.65rem;font-weight:800;letter-spacing:1.5px;color:var(--muted);padding:16px 20px 6px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-left:4px solid transparent;transition:all .2s;text-decoration:none;color:var(--text)}
+.nav-item:hover{background:#F0F4FF}
+.nav-item.active{border-left-color:var(--accent);background:#EBF0FF;color:var(--accent);font-weight:700}
+.nav-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.nav-title{font-size:.83rem;flex:1;line-height:1.3}
+.nav-badge{font-size:.65rem;background:var(--border);border-radius:10px;padding:1px 6px;color:var(--muted);font-weight:700;white-space:nowrap}
+.nav-badge.scored{background:#D1FAE5;color:#065F46}
+.nav-badge.partial{background:#FEF3C7;color:#92400E}
+#sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
+#results-btn{width:100%;padding:10px;background:#1F3864;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:.85rem;font-weight:700;transition:background .2s}
+#results-btn:hover{background:#2E5EAA}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;padding:28px 36px}
+.page{display:none}
+.page.active{display:block}
+
+/* SECTION HEADER */
+.sec-hdr{border-radius:10px;padding:20px 28px;margin-bottom:24px;color:#fff}
+.sec-hdr h2{font-size:1.4rem;font-weight:800}
+.sec-hdr p{font-size:.85rem;opacity:.85;margin-top:4px}
+
+/* TABS */
+.tab-bar{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:24px;flex-wrap:wrap}
+.tab-btn{padding:7px 18px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--muted);transition:all .2s;white-space:nowrap}
+.tab-btn:hover{background:var(--bg)}
+.tab-btn.active{background:var(--accent);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* SCORE BAR */
+.score-bar{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.score-label{font-size:.8rem;color:var(--muted);font-weight:600}
+.score-val{font-size:1rem;font-weight:800;color:var(--accent)}
+.score-pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-size:.72rem;padding:3px 10px;border-radius:12px;font-weight:700}
+.pill.c{background:var(--correct-bg);color:var(--correct)}
+.pill.w{background:var(--wrong-bg);color:var(--wrong)}
+.pill.u{background:#F3F4F6;color:var(--muted)}
+
+/* QUESTION CARD */
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px 26px;margin-bottom:16px;transition:box-shadow .2s}
+.q-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.q-num{font-size:.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.q-text{font-size:.97rem;font-weight:600;line-height:1.5;margin-bottom:16px}
+
+/* MCQ OPTIONS */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt-btn{display:flex;align-items:center;gap:12px;padding:10px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;background:var(--card);text-align:left;font-size:.88rem;transition:all .2s;width:100%}
+.opt-btn:hover:not(:disabled){border-color:var(--accent);background:#F0F4FF}
+.opt-btn.selected{border-color:#9CB3E0;background:#F0F4FF}
+.opt-btn.correct{border-color:var(--correct);background:var(--correct-bg);color:var(--correct)}
+.opt-btn.wrong{border-color:var(--wrong);background:var(--wrong-bg);color:var(--wrong)}
+.opt-btn.missed{border-color:#15803D;background:#DCFCE7;color:#15803D}
+.opt-btn:disabled{cursor:default}
+.opt-ltr{font-weight:800;font-size:.8rem;width:22px;height:22px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* TF */
+.tf-btns{display:flex;gap:10px}
+.tf-btn{flex:1;padding:11px;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:700;transition:all .2s;background:var(--card)}
+.tf-btn:hover:not(:disabled){background:#F0F4FF;border-color:var(--accent)}
+.tf-btn.selected{border-color:#9CB3E0;background:#F0F4FF}
+.tf-btn.correct{border-color:var(--correct);background:var(--correct-bg);color:var(--correct)}
+.tf-btn.wrong{border-color:var(--wrong);background:var(--wrong-bg);color:var(--wrong)}
+.tf-btn:disabled{cursor:default}
+
+/* FILL */
+.fill-input{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;transition:border-color .2s;font-family:inherit}
+.fill-input:focus{outline:none;border-color:var(--accent)}
+.fill-input.correct{border-color:var(--correct);background:var(--correct-bg);color:var(--correct)}
+.fill-input.wrong{border-color:var(--wrong);background:var(--wrong-bg);color:var(--wrong)}
+.fill-input:disabled{cursor:default}
+
+/* FEEDBACK */
+.feedback{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:.84rem;font-weight:600;display:none}
+.feedback.correct{background:var(--correct-bg);color:var(--correct);display:block}
+.feedback.wrong{background:var(--wrong-bg);color:var(--wrong);display:block}
+
+/* SUBMIT BTN */
+.submit-wrap{margin-top:8px;display:flex;gap:10px;flex-wrap:wrap}
+.submit-btn{padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:.88rem;font-weight:700;transition:background .2s}
+.submit-btn:hover{background:#1A4080}
+.submit-btn:disabled{opacity:.5;cursor:default}
+.reset-btn{padding:10px 22px;background:#fff;color:var(--muted);border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:.88rem;font-weight:700;transition:all .2s}
+.reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* SECTION SUMMARY */
+.sec-summary{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-top:24px}
+.sec-summary h3{font-size:1rem;font-weight:800;margin-bottom:16px;color:var(--text)}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.sum-box{border-radius:8px;padding:14px;text-align:center}
+.sum-box .val{font-size:1.5rem;font-weight:900;margin-bottom:4px}
+.sum-box .lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+
+/* FLASHCARDS */
+.flash-wrap{perspective:1000px;max-width:600px;margin:0 auto 20px}
+.flash-card{position:relative;height:220px;cursor:pointer;transform-style:preserve-3d;transition:transform .5s}
+.flash-card.flipped{transform:rotateY(180deg)}
+.flash-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.flash-front{background:#1F3864;color:#fff}
+.flash-back{background:#065F46;color:#fff;transform:rotateY(180deg)}
+.flash-face .side{font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;opacity:.7;margin-bottom:12px;font-weight:800}
+.flash-face .content{font-size:1rem;line-height:1.5;font-weight:600}
+.flash-face .hint{font-size:.75rem;opacity:.6;margin-top:12px}
+.flash-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px;max-width:600px;margin-left:auto;margin-right:auto}
+.flash-nav button{padding:9px 20px;border:2px solid var(--border);border-radius:var(--radius);background:var(--card);cursor:pointer;font-size:.85rem;font-weight:700;transition:all .2s}
+.flash-nav button:hover{border-color:var(--accent);color:var(--accent)}
+.flash-nav button:disabled{opacity:.4;cursor:default}
+.flash-counter{font-size:.85rem;color:var(--muted);font-weight:700;min-width:80px;text-align:center}
+.flash-progress{max-width:600px;margin:12px auto 0;height:4px;background:var(--border);border-radius:2px}
+.flash-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+
+/* RESULTS PAGE */
+.results-hdr{text-align:center;padding:32px 20px;background:var(--card);border-radius:12px;margin-bottom:28px;border:1px solid var(--border)}
+.results-hdr h2{font-size:1.8rem;font-weight:900;color:#1F3864;margin-bottom:8px}
+.results-total{font-size:3rem;font-weight:900;color:var(--accent)}
+.results-sub{color:var(--muted);font-size:.9rem;margin-top:6px}
+.results-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:28px}
+.res-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.res-card h4{font-size:.85rem;font-weight:800;margin-bottom:12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px}
+.res-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.82rem;border-bottom:1px solid #F3F4F6}
+.res-row:last-child{border-bottom:none}
+.res-row .lbl{color:var(--muted)}
+.res-row .val{font-weight:800}
+.wrong-review{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:16px}
+.wrong-review h4{color:var(--wrong);font-size:.9rem;font-weight:800;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--wrong-bg)}
+.wr-item{padding:10px 0;border-bottom:1px solid #F3F4F6}
+.wr-item:last-child{border-bottom:none}
+.wr-q{font-size:.85rem;font-weight:600;margin-bottom:6px}
+.wr-yours{font-size:.8rem;color:var(--wrong);font-weight:600}
+.wr-correct{font-size:.8rem;color:var(--correct);font-weight:600}
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#1F3864;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:.85rem;font-weight:700;margin-bottom:24px;transition:background .2s}
+.back-btn:hover{background:#2E5EAA}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sidebar{width:200px}
+  #main{padding:20px 16px}
+}
+@media(max-width:600px){
+  #layout{flex-direction:column}
+  #sidebar{width:100%;height:auto;border-right:none;border-bottom:2px solid var(--border)}
+  #sidebar-inner{display:flex;overflow-x:auto;padding:8px 8px}
+  .nav-item{flex-shrink:0;border-left:none;border-bottom:3px solid transparent;padding:8px 12px;border-radius:6px}
+  .nav-item.active{border-left-color:transparent;border-bottom-color:var(--accent)}
+  .sidebar-label,.sidebar-footer,.nav-badge{display:none}
+  #main{padding:16px 12px}
+}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>CS 334: Principles of Operating Systems</h1>
+  <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+    <span class="subtitle" id="hdr-sub">0 / 0 answered</span>
+  </div>
+</div>
+
+<div id="layout">
+  <nav id="sidebar">
+    <div id="sidebar-inner" id="nav-list"></div>
+    <div id="sidebar-footer">
+      <button id="results-btn" onclick="showResults()">View Full Results</button>
+    </div>
+  </nav>
+  <div id="main">
+    <div id="page-home" class="page active">
+      <div style="max-width:680px;margin:40px auto;text-align:center">
+        <div style="font-size:3rem;margin-bottom:20px">OS</div>
+        <h2 style="font-size:1.6rem;font-weight:900;color:#1F3864;margin-bottom:12px">CS 334 Interactive Study System</h2>
+        <p style="color:var(--muted);margin-bottom:32px;line-height:1.7;font-size:.95rem">Comprehensive quiz covering all OS topics. Answer MCQ, True/False, and Fill-in-the-Blank questions, then review Flashcards. Your score is saved per section until you refresh.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;text-align:left;margin-bottom:32px">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font-weight:800;font-size:.9rem;color:#1F3864;margin-bottom:6px">Multiple Choice</div>
+            <div style="font-size:.8rem;color:var(--muted)">Select the correct answer from 4 options. Instant feedback on submission.</div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font-weight:800;font-size:.9rem;color:#1F3864;margin-bottom:6px">True / False</div>
+            <div style="font-size:.8rem;color:var(--muted)">Determine if each statement is true or false with explanations on errors.</div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font-weight:800;font-size:.9rem;color:#1F3864;margin-bottom:6px">Fill in the Blank</div>
+            <div style="font-size:.8rem;color:var(--muted)">Type the missing keyword or phrase. Case-insensitive matching.</div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font-weight:800;font-size:.9rem;color:#1F3864;margin-bottom:6px">Flashcards</div>
+            <div style="font-size:.8rem;color:var(--muted)">Click to flip and reveal. Navigate through all cards at your own pace.</div>
+          </div>
+        </div>
+        <button class="submit-btn" style="font-size:1rem;padding:14px 40px" onclick="navigateTo('intro')">Start Studying</button>
+      </div>
+    </div>
+    <div id="page-results" class="page"></div>
+    <div id="page-topic" class="page"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const TOPICS = [
+  {id:"intro",title:"OS Introduction",color:"#1F3864",questions:{
+    mcq:[
+      {q:"What is the primary purpose of an Operating System?",opts:["To compile programs","To act as an intermediary between hardware and users","To provide internet access","To format storage devices"],ans:1},
+      {q:"Which of the following is NOT a core function of an OS?",opts:["Process Management","Memory Management","Sending Emails","File System Management"],ans:2},
+      {q:"Which generation of computers first introduced multiprogramming?",opts:["First (Vacuum Tubes)","Second (Transistors)","Third (Integrated Circuits)","Fourth (Microprocessors)"],ans:2},
+      {q:"What is a kernel?",opts:["A type of virus","The core of the OS that runs in privileged mode","A file system structure","A type of CPU register"],ans:1},
+      {q:"Which OS type is best suited for real-time industrial control?",opts:["Batch OS","Distributed OS","Real-Time OS","Network OS"],ans:2},
+      {q:"UNIX and Windows use what file structure type?",opts:["Structured records","Flat/unstructured files","Hierarchical records","Binary trees"],ans:1},
+      {q:"Which of the following is an example of a time-sharing OS?",opts:["MS-DOS","UNIX","CP/M","OS/360"],ans:1},
+      {q:"A shell is:",opts:["The physical casing of a computer","The interface between the user and the kernel","A type of memory","A scheduling algorithm"],ans:1},
+      {q:"Which OS type allows multiple users to share resources simultaneously?",opts:["Single-user OS","Multi-user OS","Real-time OS","Batch OS"],ans:1},
+      {q:"The 9-bit permission system in UNIX/Linux consists of:",opts:["Read, Write, Execute for Owner only","Read, Write, Delete for all users","Read, Write, Execute for Owner, Group, and Others","Full control bits"],ans:2},
+      {q:"Which is an embedded OS example?",opts:["Windows 10","Ubuntu","Symbian","macOS"],ans:2},
+      {q:"What does HAL stand for in Windows architecture?",opts:["High Access Layer","Hardware Abstraction Layer","Host Application Library","Hybrid Allocation Logic"],ans:1},
+      {q:"Linux uses which type of kernel?",opts:["Microkernel","Hybrid kernel","Monolithic kernel","Exokernel"],ans:2},
+      {q:"Windows NT kernel type is:",opts:["Pure microkernel","Monolithic kernel","Hybrid kernel","Nano kernel"],ans:2},
+      {q:"What is the main advantage of a distributed OS?",opts:["Single point of failure","Resource sharing across networked computers","Simpler design","No network required"],ans:1}
+    ],
+    tf:[
+      {q:"An OS only manages hardware and has no role in security.",ans:false},
+      {q:"The kernel operates in a privileged mode (kernel mode).",ans:true},
+      {q:"Linux is an open-source operating system.",ans:true},
+      {q:"A Real-Time OS guarantees response within a specific time deadline.",ans:true},
+      {q:"Windows uses a purely monolithic kernel architecture.",ans:false},
+      {q:"A shell is the core of the operating system.",ans:false},
+      {q:"Batch OS processes jobs without user interaction.",ans:true},
+      {q:"APFS is a file system used by Microsoft Windows.",ans:false},
+      {q:"The OS is the only program that runs directly on hardware.",ans:true},
+      {q:"NTFS supports file compression and encryption.",ans:true},
+      {q:"Linux can run multiple window managers such as GNOME and KDE.",ans:true},
+      {q:"In UNIX, everything is treated as a file including devices.",ans:true}
+    ],
+    fill:[
+      {q:"An OS acts as a ___ between hardware and user applications.",ans:"intermediary"},
+      {q:"The ___ register defines the smallest physical address of a process.",ans:"base"},
+      {q:"Linux kernel type is called a ___ kernel.",ans:"monolithic"},
+      {q:"The Windows equivalent of the Linux shell for advanced scripting is ___.",ans:"powershell"},
+      {q:"The first computers used ___ tubes as processing components.",ans:"vacuum"},
+      {q:"An OS manages CPU, memory, I/O devices and ___ as resources.",ans:"storage"},
+      {q:"File and folder permissions, compression, and encryption are features of ___.",ans:"ntfs"}
+    ],
+    flash:[
+      {q:"What is an Operating System?",a:"Software that acts as an intermediary between hardware and user programs; manages hardware resources and provides an execution environment."},
+      {q:"What are the two primary roles of an OS?",a:"1) Hardware Abstraction - hides hardware complexity from programs. 2) Resource Management - allocates CPU, memory, I/O, and storage fairly and efficiently."},
+      {q:"What is a kernel?",a:"The core of the OS that runs in privileged (kernel) mode and directly controls hardware. Manages processes, memory, devices, and system calls."},
+      {q:"What is a shell?",a:"The user interface to the OS kernel. Interprets commands and invokes system calls. Examples: Bash, Zsh (Linux), PowerShell, Command Prompt (Windows)."},
+      {q:"Name and describe OS types.",a:"Batch: no user interaction. Time-sharing/Multi-user: multiple users share CPU. Real-Time: guaranteed response deadlines. Distributed: resources across networked machines. Embedded: in dedicated devices."},
+      {q:"Windows vs Linux kernel architecture?",a:"Windows: Hybrid kernel - combines monolithic performance with microkernel modularity. HAL isolates hardware. Linux: Monolithic kernel - all services (drivers, FS, memory) in one kernel address space; supports loadable modules."}
+    ]
+  }},
+  {id:"process",title:"Process Management",color:"#1A6B1A",questions:{
+    mcq:[
+      {q:"Which of the following is NOT part of a process address space?",opts:["Stack","Heap","Page Table (kernel structure)","Code/Text"],ans:2},
+      {q:"In the five-state process model, which transition is NOT valid?",opts:["New to Ready","Running to Blocked","Blocked to Ready","Blocked to Running directly"],ans:3},
+      {q:"What does PCB stand for?",opts:["Process Control Block","Program Counter Buffer","Peripheral Control Bus","Process Code Base"],ans:0},
+      {q:"Which scheduler moves processes between disk and memory?",opts:["Short-term scheduler","Long-term scheduler","Medium-term scheduler","I/O scheduler"],ans:2},
+      {q:"A process in the BLOCKED state is waiting for:",opts:["CPU allocation","An I/O event or resource","Memory to be freed","A new process to finish"],ans:1},
+      {q:"The Program Counter (PC) in the PCB indicates:",opts:["The process priority","The next instruction to execute","The amount of memory used","The process ID"],ans:1},
+      {q:"Which system call creates a new process in Linux?",opts:["exec()","spawn()","fork()","create()"],ans:2},
+      {q:"The seven-state model adds which two states to the five-state model?",opts:["Suspended and Waiting","Blocked-Suspended and Ready-Suspended","Inactive and Paused","Idle and Dormant"],ans:1},
+      {q:"Context switching refers to:",opts:["Changing the OS","Saving and restoring process state during a CPU switch","Switching memory pages","Changing file permissions"],ans:1},
+      {q:"Which scheduler controls the degree of multiprogramming?",opts:["Short-term (CPU) scheduler","I/O scheduler","Long-term scheduler","Memory scheduler"],ans:2},
+      {q:"The stack section of a process address space contains:",opts:["Global variables","Dynamic memory allocations","Function parameters, return addresses, local variables","Executable instructions"],ans:2},
+      {q:"IPC (Inter-Process Communication) includes:",opts:["Shared memory only","Message passing only","Both shared memory and message passing","Neither"],ans:2},
+      {q:"PID stands for:",opts:["Program Instruction Data","Process Identifier","Peripheral Interface Driver","Page Index Database"],ans:1},
+      {q:"When a process is involuntarily removed from Running to Ready it is called:",opts:["Dispatching","Preemption","Blocking","Termination"],ans:1},
+      {q:"The heap section of a process is used for:",opts:["Static code","Dynamically allocated memory (malloc/new)","Stack frames","OS kernel data"],ans:1}
+    ],
+    tf:[
+      {q:"A program and a process are the same thing.",ans:false},
+      {q:"The PCB stores all information needed to restart a preempted process.",ans:true},
+      {q:"In the two-state model, a process is either Running or Not Running.",ans:true},
+      {q:"Context switching has zero overhead on modern CPUs.",ans:false},
+      {q:"The long-term scheduler selects which process to run next from the ready queue.",ans:false},
+      {q:"fork() in Linux creates an exact copy of the parent process.",ans:true},
+      {q:"A process can move directly from Blocked to Running in the five-state model.",ans:false},
+      {q:"The stack grows upward and the heap grows downward in typical process layout.",ans:false},
+      {q:"Medium-term scheduling involves swapping processes in and out of memory.",ans:true},
+      {q:"Accounting information in the PCB is used for billing and performance monitoring.",ans:true}
+    ],
+    fill:[
+      {q:"A program becomes a ___ when it is loaded into memory and actively executing.",ans:"process"},
+      {q:"The five states of a process are: New, Ready, Running, ___, and Terminated.",ans:"blocked"},
+      {q:"The ___ scheduler selects which ready process runs next on the CPU.",ans:"short-term"},
+      {q:"The ___ section of a process address space stores the executable instructions.",ans:"code"},
+      {q:"Saving the current process state and loading the next is called a ___ switch.",ans:"context"},
+      {q:"The ___ holds all information needed to manage a process (PID, PC, registers, state).",ans:"pcb"},
+      {q:"Linux creates a new process using the ___ system call.",ans:"fork"}
+    ],
+    flash:[
+      {q:"What is a Process?",a:"A program in execution. Active entity with its own address space (code, data, heap, stack), execution state, and allocated resources. Different from a program (passive, on disk)."},
+      {q:"Five-state process model?",a:"New: being created. Ready: waiting for CPU. Running: executing on CPU. Blocked: waiting for I/O/event. Terminated: finished. Key: Blocked cannot go directly to Running."},
+      {q:"What is a PCB and what does it contain?",a:"Process Control Block. Contains: PID, Program Counter, CPU registers, process state, scheduling priority, memory management info, I/O status, accounting info."},
+      {q:"What is context switching?",a:"Saving the state (PCB) of the currently running process and loading the saved state of the next process. Overhead: CPU does no useful work during the switch. Time: hardware dependent."},
+      {q:"Three schedulers in OS?",a:"Long-term (job scheduler): selects jobs from disk to load into memory; controls degree of multiprogramming. Short-term (CPU scheduler): picks next ready process for CPU. Medium-term (swapper): swaps processes in/out of memory."},
+      {q:"Difference between process and program?",a:"Program: passive set of instructions stored on disk. Process: active entity - program loaded in memory, with state, PC, registers, and allocated resources. One program can create many processes."}
+    ]
+  }},
+  {id:"scheduling",title:"Process Scheduling",color:"#5D1886",questions:{
+    mcq:[
+      {q:"In FCFS scheduling, which problem occurs when a long process runs before short ones?",opts:["Circular wait","Convoy effect","Priority inversion","Starvation"],ans:1},
+      {q:"Which scheduling algorithm achieves minimum average waiting time?",opts:["FCFS","Round Robin","Shortest Job First (SJF)","Priority"],ans:2},
+      {q:"In Round Robin, when a process exhausts its time quantum it:",opts:["Terminates","Goes to the back of the ready queue","Gets higher priority","Blocks for I/O"],ans:1},
+      {q:"Turnaround Time is defined as:",opts:["Time in the ready queue","Time from submission to completion (CT - AT)","CPU execution time only","Time blocked for I/O"],ans:1},
+      {q:"HRRN response ratio = ?",opts:["BT / (WT+1)","(WT + BT) / BT","(BT - WT) / BT","WT / BT"],ans:1},
+      {q:"Which algorithm can cause starvation of low-priority processes?",opts:["FCFS","Round Robin","Priority Scheduling","SJF (if processes always arrive)"],ans:2},
+      {q:"Preemptive SJF is also known as:",opts:["HRRN","SRTF (Shortest Remaining Time First)","Round Robin","Multilevel Queue"],ans:1},
+      {q:"Throughput in CPU scheduling is measured as:",opts:["CPU idle time per second","Number of processes completed per time unit","Average waiting time","Total burst time"],ans:1},
+      {q:"The aging technique solves:",opts:["Deadlock","Memory fragmentation","Starvation in priority scheduling","Page faults"],ans:2},
+      {q:"Waiting Time (WT) = ?",opts:["CT - AT","TAT - BT","BT + AT","CT - BT"],ans:1},
+      {q:"Best scheduling for interactive time-sharing systems?",opts:["FCFS","SJF","Round Robin","Priority (non-preemptive)"],ans:2},
+      {q:"SPN (Shortest Process Next) is the non-preemptive form of:",opts:["HRRN","SJF/SPN itself (same)","SRTF","Round Robin"],ans:1},
+      {q:"If Round Robin time quantum is very large, it behaves like:",opts:["SJF","Priority","FCFS","HRRN"],ans:2},
+      {q:"Multilevel Queue scheduling assigns processes to queues based on:",opts:["Arrival time","Process type/category (e.g., interactive vs batch)","Burst time","Priority only"],ans:1},
+      {q:"Which metric measures how quickly a process gets its first CPU response?",opts:["Turnaround Time","Waiting Time","Response Time","Throughput"],ans:2}
+    ],
+    tf:[
+      {q:"FCFS is a preemptive scheduling algorithm.",ans:false},
+      {q:"SJF scheduling requires knowing the burst time in advance.",ans:true},
+      {q:"Round Robin is fair because every process gets equal CPU time slices.",ans:true},
+      {q:"A smaller time quantum in Round Robin always leads to better performance.",ans:false},
+      {q:"Starvation can occur in Priority scheduling.",ans:true},
+      {q:"Turnaround Time = Completion Time - Burst Time.",ans:false},
+      {q:"SRTF can preempt the currently running process when a shorter job arrives.",ans:true},
+      {q:"FCFS is optimal for minimizing average waiting time.",ans:false},
+      {q:"Aging increases the priority of a process the longer it waits.",ans:true},
+      {q:"Throughput measures the number of processes completed per unit time.",ans:true},
+      {q:"In Round Robin with very large quantum, performance equals FCFS.",ans:true},
+      {q:"Waiting Time = Arrival Time - Turnaround Time.",ans:false}
+    ],
+    fill:[
+      {q:"Turnaround Time = Completion Time - ___.",ans:"arrival time"},
+      {q:"Waiting Time = Turnaround Time - ___.",ans:"burst time"},
+      {q:"The problem where a long process blocks shorter processes in FCFS is called the ___ effect.",ans:"convoy"},
+      {q:"___ scheduling assigns the CPU to the process with the smallest remaining execution time.",ans:"srtf"},
+      {q:"The solution to starvation in priority scheduling is called ___.",ans:"aging"},
+      {q:"In Round Robin, each process gets a fixed CPU time called a time ___.",ans:"quantum"},
+      {q:"HRRN stands for Highest ___ Ratio Next.",ans:"response"}
+    ],
+    flash:[
+      {q:"FCFS Scheduling",a:"First-Come First-Served: processes run in arrival order. Non-preemptive. Simple but suffers from convoy effect - one long process blocks all short ones behind it."},
+      {q:"SJF / SPN Scheduling",a:"Shortest Job First: runs process with smallest burst time. Optimal for minimum average waiting time. Non-preemptive. Requires knowing burst times in advance (predictive)."},
+      {q:"SRTF Scheduling",a:"Shortest Remaining Time First: preemptive SJF. Preempts current process if newly arrived process has shorter remaining time. Optimal but high context switch overhead."},
+      {q:"Round Robin Scheduling",a:"Each process gets a time quantum q. After q expires, process moves to back of queue. Fair and good response time. Preemptive. Large q -> FCFS. Small q -> lots of context switches."},
+      {q:"Priority Scheduling",a:"CPU given to highest-priority process. Can be preemptive or non-preemptive. Problem: starvation of low-priority processes. Solution: aging (gradually increase priority of waiting processes)."},
+      {q:"HRRN Scheduling",a:"Highest Response Ratio Next. Response Ratio = (WT + BT) / BT. Run process with highest ratio. Balances short and long jobs. Prevents starvation. Non-preemptive."},
+      {q:"Scheduling Metrics Formulas",a:"TAT = CT - AT. WT = TAT - BT. Response Time = first CPU start - AT. Throughput = # processes / total time. CPU Utilization = busy time / total time."}
+    ]
+  }},
+  {id:"sync",title:"Synchronization",color:"#8B4500",questions:{
+    mcq:[
+      {q:"A race condition occurs when:",opts:["Two processes crash simultaneously","Multiple processes access shared data with outcome depending on execution order","A process runs out of memory","A deadlock forms"],ans:1},
+      {q:"Which is NOT a requirement of the Critical Section problem?",opts:["Mutual Exclusion","Progress","Bounded Waiting","Starvation Prevention"],ans:3},
+      {q:"Peterson's Solution satisfies:",opts:["Only Mutual Exclusion","Only Progress","All three requirements (ME, Progress, Bounded Waiting)","None of the three"],ans:2},
+      {q:"A semaphore value of 0 means:",opts:["Resource is available","Resource in use / process must wait","System error","Process terminated"],ans:1},
+      {q:"The simple boolean flag approach (Lock Variable) fails because:",opts:["It uses too much memory","Check-then-set is not atomic","Requires special hardware","Only works for 2 processes"],ans:1},
+      {q:"The Turn Variable algorithm fails which requirement?",opts:["Mutual Exclusion","Progress","Bounded Waiting","All three"],ans:1},
+      {q:"wait(S) on a semaphore:",opts:["Increments S then checks","Decrements S; if S < 0, process blocks","Signals another process","Resets S to 0"],ans:1},
+      {q:"Direct Addressing in message passing means:",opts:["Processes communicate via a mailbox","Processes name each other explicitly in send/receive","Messages are broadcast","No addressing needed"],ans:1},
+      {q:"A binary semaphore can take values:",opts:["Any integer","0 or 1 only","0, 1, or -1","Only positive values"],ans:1},
+      {q:"signal(S) on a semaphore:",opts:["Decrements S","Increments S; wakes a waiting process if S <= 0","Resets S","Blocks the calling process"],ans:1}
+    ],
+    tf:[
+      {q:"Peterson's Solution works correctly for more than two processes.",ans:false},
+      {q:"Mutual Exclusion means only one process can be in the critical section at a time.",ans:true},
+      {q:"A counting semaphore can only take values 0 or 1.",ans:false},
+      {q:"The flag[] (interested variable) algorithm satisfies all three critical section requirements.",ans:false},
+      {q:"Message passing is simpler to implement than shared memory for IPC.",ans:true},
+      {q:"A process waiting on a semaphore is added to a waiting queue.",ans:true},
+      {q:"Bounded Waiting ensures a process will eventually enter its critical section.",ans:true},
+      {q:"The signal(S) operation decrements the semaphore value.",ans:false}
+    ],
+    fill:[
+      {q:"The three requirements for the Critical Section problem are: Mutual Exclusion, Progress, and ___.",ans:"bounded waiting"},
+      {q:"A ___ condition occurs when processes share data and the result depends on execution order.",ans:"race"},
+      {q:"Peterson's solution uses two variables: ___ and interested[].",ans:"turn"},
+      {q:"The ___ operation on a semaphore decrements the value and blocks if value < 0.",ans:"wait"},
+      {q:"Indirect addressing in message passing uses a ___ (mailbox/port) for communication.",ans:"port"}
+    ],
+    flash:[
+      {q:"What is a race condition?",a:"When multiple processes concurrently access and manipulate shared data and the final result depends on the order of execution. Must be prevented with synchronization."},
+      {q:"3 requirements for the Critical Section problem?",a:"1) Mutual Exclusion: only one process in CS at a time. 2) Progress: if no process is in CS, a waiting process must eventually enter (no indefinite postponement). 3) Bounded Waiting: a limit exists on how many times others enter before a waiting process does."},
+      {q:"Why does Lock Variable fail?",a:"The read (test lock=0) and write (set lock=1) are not atomic. Between read and write, another process can read 0 and also enter CS. Violates mutual exclusion."},
+      {q:"Why does Turn Variable fail Progress?",a:"If process P0 sets turn=1 (giving P1 priority) but P1 does not want the CS, P0 cannot proceed even though the CS is free. Violates Progress requirement."},
+      {q:"What is a semaphore?",a:"Synchronization integer S. wait(S): if S>0, S--; else block. signal(S): S++; if any blocked, wake one. Binary: 0 or 1 only. Counting: any non-negative integer. Used to control access to shared resources."},
+      {q:"Peterson's Solution?",a:"Uses: turn (whose turn it is) and flag[2] (who wants to enter). Process i sets flag[i]=true, turn=j, then waits while flag[j]=true AND turn=j. Satisfies all 3 requirements for 2 processes only."}
+    ]
+  }},
+  {id:"deadlock",title:"Deadlocks",color:"#8B0000",questions:{
+    mcq:[
+      {q:"Which is NOT one of the four Coffman conditions for deadlock?",opts:["Mutual Exclusion","Hold and Wait","Preemption (forced removal)","Circular Wait"],ans:2},
+      {q:"Banker's Algorithm is used for:",opts:["Deadlock Prevention","Deadlock Avoidance","Deadlock Detection","Deadlock Recovery"],ans:1},
+      {q:"In the Banker's Algorithm, Need[i][j] = ?",opts:["Allocation[i][j] - Max[i][j]","Max[i][j] - Allocation[i][j]","Available[j] - Allocation[i][j]","Max[i][j] + Available[j]"],ans:1},
+      {q:"A system is in a safe state if:",opts:["No deadlock currently exists","There exists a safe sequence in which all processes can complete","All resources are allocated","No process is waiting"],ans:1},
+      {q:"Deadlock Prevention eliminates deadlock by:",opts:["Detecting cycles","Ensuring at least one Coffman condition cannot hold","Checking for safe states","Restarting the system"],ans:1},
+      {q:"A Resource Allocation Graph with no cycles indicates:",opts:["Definitely in deadlock","Definitely no deadlock (single-instance resources)","Possible deadlock","Safe state only"],ans:1},
+      {q:"Deadlock recovery can be done by:",opts:["Allocating more resources","Process termination or resource preemption","Ignoring the deadlock","Restarting the OS"],ans:1},
+      {q:"In Banker's Algorithm, if a requested grant leads to unsafe state:",opts:["Grant it anyway","Make the process wait","Terminate the process","Ignore the request"],ans:1},
+      {q:"Which condition is eliminated by requiring all resources requested at start?",opts:["Mutual Exclusion","Hold and Wait","No Preemption","Circular Wait"],ans:1},
+      {q:"Starvation differs from deadlock in that:",opts:["They are identical","Deadlock: permanently blocked; Starvation: may eventually run with aging","Starvation is permanent; deadlock is temporary","Deadlock involves I/O only"],ans:1}
+    ],
+    tf:[
+      {q:"Deadlock requires all four Coffman conditions to hold simultaneously.",ans:true},
+      {q:"Banker's Algorithm guarantees safety by preventing any unsafe state.",ans:true},
+      {q:"A cycle in a RAG with single-instance resources always means deadlock.",ans:true},
+      {q:"Deadlock prevention is more efficient than deadlock avoidance.",ans:false},
+      {q:"A safe state guarantees no deadlock will ever occur in the future regardless of requests.",ans:false},
+      {q:"Hold and Wait means a process holds resources while waiting for additional ones.",ans:true},
+      {q:"Process termination for deadlock recovery can abort all deadlocked processes at once.",ans:true},
+      {q:"Circular Wait can be prevented by imposing a total ordering of resource types.",ans:true}
+    ],
+    fill:[
+      {q:"The four Coffman conditions: Mutual Exclusion, Hold and Wait, No Preemption, and ___.",ans:"circular wait"},
+      {q:"In Banker's Algorithm, Need = ___ - Allocation.",ans:"max"},
+      {q:"A ___ sequence ensures all processes can complete without deadlock.",ans:"safe"},
+      {q:"The solution to starvation in scheduling is called ___.",ans:"aging"},
+      {q:"Banker's Algorithm uses the ___ matrix to track current resource allocations.",ans:"allocation"},
+      {q:"Safety Algorithm step: Work = Work + ___[i] when a process completes.",ans:"allocation"}
+    ],
+    flash:[
+      {q:"4 Coffman conditions for deadlock?",a:"1) Mutual Exclusion: resource held in non-sharable mode. 2) Hold and Wait: holds resources while requesting more. 3) No Preemption: resources cannot be forcibly taken. 4) Circular Wait: P1 waits for P2, P2 waits for P3, ... Pn waits for P1."},
+      {q:"What is the Banker's Algorithm?",a:"Deadlock avoidance. Before granting a resource request, simulate the allocation and run the Safety Algorithm. If result is safe state -> grant. If unsafe -> make process wait. Uses: Available, Max, Allocation, Need matrices."},
+      {q:"Safety Algorithm steps?",a:"1) Work=Available, Finish[i]=false for all i. 2) Find i: Finish[i]=false AND Need[i]<=Work. 3) Work+=Allocation[i], Finish[i]=true. Go to 2. 4) If all Finish[i]=true -> SAFE. Sequence of selected i's = safe sequence."},
+      {q:"4 strategies to handle deadlock?",a:"Prevention: ensure at least one Coffman condition cannot hold. Avoidance: Banker's Algorithm. Detection: find cycles/unsafe states then recover. Ignorance (Ostrich): accept risk (used in some commercial OS)."},
+      {q:"Deadlock vs Starvation?",a:"Deadlock: circular wait, all involved processes permanently blocked, no progress. Starvation: process indefinitely delayed due to scheduling policy but no circular dependency; solvable with aging."}
+    ]
+  }},
+  {id:"memory",title:"Memory Management",color:"#004D40",questions:{
+    mcq:[
+      {q:"Which address binding stage allows a process to be moved in memory during execution?",opts:["Compile-time","Load-time","Execution-time","Link-time"],ans:2},
+      {q:"The MMU translates:",opts:["Physical to logical addresses","Logical to physical addresses at runtime","Disk addresses to memory","Cache to main memory"],ans:1},
+      {q:"Internal fragmentation occurs when:",opts:["Free memory is scattered","Allocated memory is larger than needed; extra is unused","A process requests too much memory","Page tables overflow"],ans:1},
+      {q:"External fragmentation occurs when:",opts:["Total free memory exists but is not contiguous","A process uses more memory than allocated","Page table is too large","Swapping takes too long"],ans:0},
+      {q:"Which hole selection algorithm picks the largest available hole?",opts:["First Fit","Best Fit","Worst Fit","Next Fit"],ans:2},
+      {q:"Compaction solves:",opts:["Internal fragmentation","External fragmentation by combining scattered free blocks","Page table overflow","TLB misses"],ans:1},
+      {q:"The TLB caches:",opts:["Page data","Recent page-to-frame number translations","Disk sector maps","Process state"],ans:1},
+      {q:"EAT with hit ratio a, TLB time e, memory time m =",opts:["a*(e+m)+(1-a)*(e+2m)","a*m+(1-a)*2m","e+m","a*(m)+(1-a)*(2m)"],ans:0},
+      {q:"Segmentation provides:",opts:["Fixed-size regions","Variable-size logical regions based on program structure (code, stack, heap, etc.)","Identical performance to paging","Non-programmable memory access"],ans:1},
+      {q:"In paging, a logical address is divided into:",opts:["Segment number and offset","Page number and page offset","Frame number and base address","Block number and sector"],ans:1},
+      {q:"The 50-percent rule states: for N allocated blocks, approximately ___ blocks lost to fragmentation.",opts:["0.1N","0.25N","0.5N","0.75N"],ans:2},
+      {q:"Valid-invalid bit 'invalid' in a page table entry means:",opts:["The page has data errors","The page is not in the process's logical address space","The frame is free","The page was recently accessed"],ans:1},
+      {q:"PTBR register points to:",opts:["Physical base of a process","The page table in memory","The TLB","Swap space"],ans:1},
+      {q:"Best page table for sparse address spaces > 32 bits?",opts:["Single-level","Two-level","Hashed / Clustered page table","Inverted page table"],ans:2},
+      {q:"Segmentation logical address <s, d> translates to:",opts:["Only base register value","base[s] + d if d < limit[s], else TRAP","Direct frame lookup","TLB only"],ans:1}
+    ],
+    tf:[
+      {q:"The MMU translates physical addresses to logical addresses.",ans:false},
+      {q:"Best-fit allocation leaves the smallest possible leftover hole.",ans:true},
+      {q:"Compaction is only possible when relocation is dynamic (execution-time binding).",ans:true},
+      {q:"STBR register is used in paging.",ans:false},
+      {q:"An inverted page table has one entry per physical frame, not per virtual page.",ans:true},
+      {q:"With a TLB hit ratio of 99%, EAT is nearly equal to one memory access time.",ans:true},
+      {q:"Paging eliminates external fragmentation.",ans:true},
+      {q:"Segmentation can cause external fragmentation because segments vary in size.",ans:true},
+      {q:"First-fit and best-fit perform better than worst-fit in terms of storage utilization.",ans:true},
+      {q:"ASIDs in TLB entries allow context switching without flushing the entire TLB.",ans:true}
+    ],
+    fill:[
+      {q:"Execution-time binding requires hardware support called the ___.",ans:"mmu"},
+      {q:"Physical address = ___ + logical address (in simple base-register MMU).",ans:"base"},
+      {q:"TLB stands for Translation Look-aside ___.",ans:"buffer"},
+      {q:"EAT with 80% hit ratio, 20ns TLB, 100ns memory: 0.80 x 100 + 0.20 x ___ = 120ns.",ans:"200"},
+      {q:"Paging avoids external fragmentation but still causes ___ fragmentation.",ans:"internal"},
+      {q:"A segment table entry contains a ___ (start) and ___ (segment length).",ans:"base / limit"},
+      {q:"The ___ rule states that ~1/3 of memory may be unusable due to fragmentation.",ans:"50-percent"}
+    ],
+    flash:[
+      {q:"Three stages of address binding?",a:"Compile-time: absolute code, location must be known (must recompile to move). Load-time: relocatable code, bound when loaded. Execution-time: bound at runtime using MMU - process can be moved during execution."},
+      {q:"What is the MMU?",a:"Memory Management Unit - hardware that translates logical (virtual) addresses to physical addresses at runtime. Simple scheme: physical = logical + relocation register (base). User never sees physical addresses."},
+      {q:"First-Fit vs Best-Fit vs Worst-Fit?",a:"First-fit: allocate first adequate hole (fast). Best-fit: allocate smallest adequate hole (leaves tiny unusable holes). Worst-fit: allocate largest hole (leaves large usable remnants). First+Best beat Worst in utilization."},
+      {q:"What is the TLB and what is EAT?",a:"Translation Look-aside Buffer: fast associative hardware cache mapping page# to frame#. EAT = a*(e+m) + (1-a)*(e+2m). At 99% hit with 20ns TLB + 100ns memory: EAT = 0.99*120 + 0.01*220 = 121ns."},
+      {q:"Paging address translation?",a:"Logical addr = (page#, offset). Page table[page#] = frame#. Physical addr = (frame# * page_size) + offset. PTBR points to page table. Two memory accesses without TLB; TLB reduces to ~1 access."},
+      {q:"Segmentation address translation?",a:"Logical addr = <s, d>. Segment table: base[s], limit[s]. Check: d < limit[s] (else TRAP). Physical addr = base[s] + d. STBR points to segment table. Variable-size segments match program structure."}
+    ]
+  }},
+  {id:"virtual",title:"Virtual Memory",color:"#1A237E",questions:{
+    mcq:[
+      {q:"Demand paging loads pages:",opts:["All at program start","Only when needed (referenced)","In reverse order","Alphabetically"],ans:1},
+      {q:"A page fault occurs when:",opts:["Page found in memory","Valid-invalid bit is 'invalid' (page not in memory)","TLB hits","A frame is freed"],ans:1},
+      {q:"Which page replacement algorithm is theoretically optimal?",opts:["FIFO","LRU","OPT (Optimal/Belady)","Second-Chance"],ans:2},
+      {q:"Belady's Anomaly means:",opts:["FIFO can have MORE page faults with MORE frames","LRU causes starvation","OPT is not implementable","Thrashing in multi-user systems"],ans:0},
+      {q:"LRU page replacement replaces:",opts:["Most recently used page","Least recently used page","Page with highest reference count","First page loaded"],ans:1},
+      {q:"Copy-on-Write (COW) allows:",opts:["Multiple processes to share a page until one writes to it","Pages written without permission","TLB to skip frame lookup","Demand paging without swap space"],ans:0},
+      {q:"Thrashing occurs when:",opts:["CPU utilization is very high","A process spends more time paging than executing","TLB has 100% hit rate","All pages are in memory"],ans:1},
+      {q:"The working set model prevents thrashing by:",opts:["Increasing page table size","Tracking active pages in a time window delta and ensuring frames >= working set size","Replacing the TLB","Speeding up disk I/O"],ans:1},
+      {q:"EAT for demand paging with page fault rate p and memory access m:",opts:["(1-p)*m + p*(fault_overhead)","p*m + (1-p)*fault_overhead","m + p*fault","p/(1-p)*m"],ans:0},
+      {q:"The Second-Chance (Clock) algorithm approximates:",opts:["OPT","FIFO","LRU","MFU"],ans:2}
+    ],
+    tf:[
+      {q:"Pure demand paging loads no pages until they are first referenced.",ans:true},
+      {q:"FIFO page replacement is immune to Belady's Anomaly.",ans:false},
+      {q:"OPT (optimal) page replacement can be practically implemented in a real OS.",ans:false},
+      {q:"The dirty bit reduces I/O by avoiding writing clean (unmodified) pages back to disk.",ans:true},
+      {q:"With p=0.001 page fault rate and appropriate overhead values, demand paging can cause ~40x slowdown.",ans:true},
+      {q:"The working set W(t,delta) tracks pages referenced in the last delta time units.",ans:true},
+      {q:"vfork() does NOT copy the parent's address space (child shares until exec).",ans:true},
+      {q:"Thrashing is best solved by adding more CPU cores.",ans:false}
+    ],
+    fill:[
+      {q:"A ___ occurs when a required page is not in physical memory and must be fetched from disk.",ans:"page fault"},
+      {q:"The replacement algorithm that replaces the page not used for the longest future time is called ___.",ans:"opt"},
+      {q:"FIFO replacement suffers from ___ anomaly.",ans:"belady's"},
+      {q:"The working set model tracks pages accessed in a time window of size ___.",ans:"delta"},
+      {q:"Copy-on-Write means processes share pages until one ___ the page.",ans:"modifies"},
+      {q:"Thrashing is prevented using the working set or ___ Fault Frequency approach.",ans:"page"}
+    ],
+    flash:[
+      {q:"What is demand paging?",a:"Pages loaded into memory ONLY when first referenced. Uses valid-invalid bit: invalid = page on disk. Reference to invalid page = PAGE FAULT -> OS loads page from disk -> update page table -> restart faulting instruction."},
+      {q:"Page fault handling steps (12 steps condensed)?",a:"1) Check internal table (valid reference?). 2) Invalid ref -> terminate; valid but not in memory -> page in. 3) Find free frame. 4) Read page from disk into frame. 5) Update page table (valid bit). 6) Restart instruction."},
+      {q:"FIFO vs LRU vs OPT?",a:"FIFO: replace oldest-loaded page. Simple, suffers Belady's Anomaly (more frames -> more faults possible). LRU: replace least recently used. Good approximation of OPT. OPT: replace page not needed for longest future time. Optimal but cannot be implemented."},
+      {q:"What is thrashing and how to prevent it?",a:"Thrashing: process spends more time in paging (swapping) than executing. Cause: too few frames allocated per process. Prevention: Working Set Model - D = sum(WSSi). If D > m (total frames), suspend a process."},
+      {q:"Copy-on-Write (COW)?",a:"After fork(), parent and child share all pages (marked read-only). When either attempts to write, OS creates a copy of only that specific page for the writing process. Efficient - avoids copying entire address space."},
+      {q:"Belady's Anomaly?",a:"In FIFO replacement: counterintuitively, allocating MORE frames can cause MORE page faults. FIFO is not a 'stack algorithm'. LRU and OPT are stack algorithms and do not suffer from Belady's anomaly."}
+    ]
+  }},
+  {id:"filesystem",title:"File Systems",color:"#4A148C",questions:{
+    mcq:[
+      {q:"A file system is responsible for:",opts:["Only storing files","File management, allocation, and access methods","Only managing directories","CPU scheduling"],ans:1},
+      {q:"Which file allocation method best supports efficient random access?",opts:["Contiguous only","Linked only","Indexed allocation","FAT only"],ans:2},
+      {q:"Contiguous file allocation main disadvantage:",opts:["Internal fragmentation only","External fragmentation and difficulty growing files","No fragmentation","Only slow sequential access"],ans:1},
+      {q:"In a bit vector, bit = 1 means:",opts:["Block is allocated","Block is free","Block has errors","Block is reserved"],ans:1},
+      {q:"Which directory structure allows sharing of sub-directories via symbolic links?",opts:["Single-level","Two-level","Tree","Acyclic graph"],ans:3},
+      {q:"Special files in UNIX/Linux:",opts:["Contain user data","Map physical devices to file names for I/O access","Are compressed archives","Are executable binaries"],ans:1},
+      {q:"Variable-length spanned blocking:",opts:["Causes internal fragmentation","Allows records to span multiple blocks with no fragmentation","Only uses fixed records","Wastes block space"],ans:1},
+      {q:"The file attribute that uniquely identifies a file numerically within the FS:",opts:["Name","Identifier","Type","Location"],ans:1},
+      {q:"NTFS (Windows) supports:",opts:["Only FAT compatibility","File permissions, compression, and encryption","Only sequential access","Only 8.3 filenames"],ans:1},
+      {q:"Linked file allocation is most efficient for:",opts:["Random access","Sequential access only","All access patterns","Indexed access"],ans:1}
+    ],
+    tf:[
+      {q:"UNIX and Windows use flat/unstructured file structures (sequences of bytes).",ans:true},
+      {q:"Indexed allocation supports both sequential and random access.",ans:true},
+      {q:"A directory is a special type of file.",ans:true},
+      {q:"The hidden flag protects a file from deletion.",ans:false},
+      {q:"The archive flag is set by the OS whenever a file is modified.",ans:true},
+      {q:"Acyclic graph directories prevent files from being shared between users.",ans:false},
+      {q:"Variable-length spanned blocking does not cause fragmentation.",ans:true},
+      {q:"APFS is Apple's older file system that preceded HFS.",ans:false}
+    ],
+    fill:[
+      {q:"A ___ is the basic element of data storage containing a single value (e.g., name, date).",ans:"field"},
+      {q:"A ___ is a combination of related fields (e.g., a student record).",ans:"record"},
+      {q:"In a bit vector free-space map, bit = ___ means the block is allocated.",ans:"0"},
+      {q:"The ___ allocation method uses a chain of block pointers.",ans:"linked"},
+      {q:"The file system tracks free disk space using a ___ list.",ans:"free-space"},
+      {q:"In UNIX, the file name and extension are separated by a ___.",ans:"period"}
+    ],
+    flash:[
+      {q:"Three file allocation methods?",a:"Contiguous: single run of blocks (fast sequential, external fragmentation, hard to grow). Linked: block chain with pointers (no external frag, sequential only, pointer overhead). Indexed: index block holds all block pointers (random + sequential access)."},
+      {q:"Four directory structures?",a:"Single-level: all files one dir (naming conflicts). Two-level: per-user dirs (same name ok). Tree (hierarchical): subdirectories + path names (modern OS default). Acyclic graph: shared files/dirs via symbolic links."},
+      {q:"Free-space management methods?",a:"Bit vector/bitmap: 1=free, 0=allocated (fast with bitwise ops). Linked list: chain of free blocks. Grouping: first free block stores n addresses. Counting: (address, count) pairs. Space Maps: ZFS approach for large storage."},
+      {q:"File attributes categories?",a:"General: name, identifier, type, location, size. Protection: access rights (rwx), owner, password. Timestamps: creation, last modified, last accessed. Flags: read-only, hidden, system, archive, access-type."},
+      {q:"Record blocking methods?",a:"Fixed blocking: fixed-size records, may cause internal fragmentation. Variable-length un-spanned: variable records, unused space wasted if record doesn't fit. Variable-length spanned: records can cross block boundaries, no wasted space."}
+    ]
+  }},
+  {id:"threads",title:"Threads",color:"#37474F",questions:{
+    mcq:[
+      {q:"A thread is the basic unit of:",opts:["Memory allocation","CPU utilization","File access","Disk I/O"],ans:1},
+      {q:"Which is NOT a benefit of multithreading?",opts:["Responsiveness","Resource Sharing","Higher per-thread memory overhead","Scalability"],ans:2},
+      {q:"In the Many-to-One threading model:",opts:["Each user thread maps to its own kernel thread","Many user threads map to one kernel thread; no true parallelism","Many kernel threads share one user thread","Thread creation is unlimited"],ans:1},
+      {q:"Amdahl's Law formula for speedup:",opts:["Speedup = N/(1-S)","Speedup <= 1/(S + (1-S)/N)","Speedup = N*S","Speedup = 1/N"],ans:1},
+      {q:"Linux implements threads using:",opts:["fork()","exec()","clone()","pthread_create() which calls clone()"],ans:2},
+      {q:"OpenMP parallelizes code using:",opts:["#include parallel","#pragma omp parallel","#define PARALLEL","//OMP_PARALLEL"],ans:1},
+      {q:"Thread-Local Storage (TLS) gives:",opts:["All threads one shared data copy","Each thread its own copy of certain data","Kernel threads access to user space","Threads that bypass OS scheduler"],ans:1},
+      {q:"The One-to-One threading model (Windows, Linux):",opts:["Has limited concurrency","Maps each user thread to a kernel thread enabling true parallelism","Prevents multiple threads from running simultaneously","Is the oldest threading model"],ans:1},
+      {q:"Data parallelism means:",opts:["Different tasks on different data","Same operation on different subsets of data distributed across cores","Different threads do different things","Sequential processing on one core"],ans:1},
+      {q:"Task parallelism means:",opts:["Same operation on different data subsets","Different tasks (threads) run concurrently, possibly on same or different data","Only one thread does work","Sequential task execution"],ans:1}
+    ],
+    tf:[
+      {q:"Threads within the same process share code, data, and OS resources but have separate stacks and registers.",ans:true},
+      {q:"Amdahl's Law shows that infinite cores can perfectly eliminate all serial overhead.",ans:false},
+      {q:"Many-to-Many model allows true parallelism on multicore systems.",ans:true},
+      {q:"A user-level thread library requires OS kernel involvement to create threads.",ans:false},
+      {q:"Grand Central Dispatch (GCD) is Apple's implicit threading technology using dispatch queues.",ans:true},
+      {q:"Thread pools pre-create threads to avoid the overhead of creating new threads per request.",ans:true},
+      {q:"Data parallelism performs different tasks on different data subsets.",ans:false},
+      {q:"Deferred thread cancellation is safer than asynchronous cancellation.",ans:true}
+    ],
+    fill:[
+      {q:"Amdahl's Law: Speedup <= 1 / (S + (1-S) / ___).",ans:"n"},
+      {q:"The four benefits of multithreading: Responsiveness, Resource Sharing, Economy, and ___.",ans:"scalability"},
+      {q:"The Linux clone() flag ___ allows threads to share the parent's memory.",ans:"clone_vm"},
+      {q:"OpenMP #pragma ___ creates a parallel region.",ans:"omp parallel"},
+      {q:"Thread pools improve performance by reusing pre-created ___ rather than creating new ones.",ans:"threads"}
+    ],
+    flash:[
+      {q:"What is a thread?",a:"The fundamental unit of CPU utilization. Consists of: thread ID, program counter, register set, and stack. Shares with other process threads: code section, data section, heap, OS resources (open files, signals)."},
+      {q:"4 benefits of multithreading?",a:"Responsiveness: continue running while blocking occurs (UI stays active). Resource Sharing: threads share process memory (no IPC overhead). Economy: cheaper than process creation/switch. Scalability: can exploit multiple CPU cores."},
+      {q:"Three multithreading models?",a:"Many-to-One: many user threads -> 1 kernel thread (no true parallelism, one block blocks all). One-to-One: each user thread -> kernel thread (true parallelism, more overhead). Many-to-Many: m user threads -> n kernel threads (flexible, best of both)."},
+      {q:"What is Amdahl's Law?",a:"Speedup <= 1 / (S + (1-S)/N) where S = serial fraction of program, N = number of cores. Key insight: diminishing returns - 50% serial code limits speedup to max 2x regardless of cores. Serial code is the bottleneck."},
+      {q:"Implicit threading methods?",a:"Thread Pools: submit tasks to pool of pre-created threads. OpenMP: compiler directives (#pragma omp parallel) to parallelize loops. Grand Central Dispatch (Apple): blocks submitted to serial or concurrent dispatch queues. Pthreads: explicit POSIX thread API."}
+    ]
+  }}
+];
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+const state = {
+  answers: {},   // {topicId_type_idx: {userAns, correct}}
+  submitted: {}, // {topicId_type: true}
+  currentTopic: null,
+  currentTab: 'mcq',
+  flashIndex: {},
+  flashFlipped: {}
+};
+
+function ans(topicId, type, idx, userAns, correct) {
+  state.answers[`${topicId}_${type}_${idx}`] = {userAns, correct};
+  updateProgress();
+}
+
+function totalAnswered() {
+  return Object.keys(state.answers).length;
+}
+
+function totalQuestions() {
+  return TOPICS.reduce((s, t) => s + t.questions.mcq.length + t.questions.tf.length + t.questions.fill.length, 0);
+}
+
+function topicScore(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  if(!t) return null;
+  const total = t.questions.mcq.length + t.questions.tf.length + t.questions.fill.length;
+  let correct = 0, answered = 0;
+  ['mcq','tf','fill'].forEach(type => {
+    t.questions[type].forEach((_,i) => {
+      const k = `${topicId}_${type}_${i}`;
+      if(state.answers[k]) { answered++; if(state.answers[k].correct) correct++; }
+    });
+  });
+  return {total, answered, correct};
+}
+
+function updateProgress() {
+  const answered = totalAnswered();
+  const total = totalQuestions();
+  const pct = total > 0 ? (answered/total*100).toFixed(0) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('hdr-sub').textContent = `${answered} / ${total} answered`;
+  renderNav();
+}
+
+// ─── NAVIGATION ─────────────────────────────────────────────────────────────
+function renderNav() {
+  const container = document.getElementById('sidebar-inner');
+  let html = '<div class="sidebar-label">Topics</div>';
+  TOPICS.forEach(t => {
+    const sc = topicScore(t.id);
+    const pct = sc && sc.answered > 0 ? Math.round(sc.correct/sc.total*100) : null;
+    const isActive = state.currentTopic === t.id;
+    const badgeClass = pct === null ? 'u' : (pct >= 70 ? 'scored' : 'partial');
+    const badgeText = pct === null ? '—' : `${sc.correct}/${sc.total}`;
+    html += `<div class="nav-item${isActive?' active':''}" onclick="navigateTo('${t.id}')">
+      <span class="nav-dot" style="background:${t.color}"></span>
+      <span class="nav-title">${t.title}</span>
+      <span class="nav-badge ${badgeClass}">${badgeText}</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function navigateTo(topicId) {
+  state.currentTopic = topicId;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-topic').classList.add('active');
+  renderTopic(topicId);
+  renderNav();
+  document.getElementById('main').scrollTop = 0;
+}
+
+function showResults() {
+  state.currentTopic = null;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-results').classList.add('active');
+  renderResults();
+  renderNav();
+  document.getElementById('main').scrollTop = 0;
+}
+
+// ─── TOPIC PAGE ──────────────────────────────────────────────────────────────
+function renderTopic(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  const sc = topicScore(topicId);
+  const tab = state.currentTab || 'mcq';
+  const container = document.getElementById('page-topic');
+
+  const tabDefs = [{id:'mcq',label:'Multiple Choice'},{id:'tf',label:'True / False'},{id:'fill',label:'Fill in the Blank'},{id:'flash',label:'Flashcards'}];
+
+  let tabs = tabDefs.map(td => `<button class="tab-btn${tab===td.id?' active':''}" onclick="switchTab('${topicId}','${td.id}')">${td.label} ${td.id!=='flash'?'('+t.questions[td.id].length+')':''}</button>`).join('');
+
+  let scoreHtml = '';
+  if(sc && sc.answered > 0) {
+    scoreHtml = `<div class="score-bar">
+      <span class="score-label">Section Score:</span>
+      <span class="score-val">${sc.correct} / ${sc.total}</span>
+      <div class="score-pills">
+        <span class="pill c">${sc.correct} Correct</span>
+        <span class="pill w">${sc.answered - sc.correct} Wrong</span>
+        <span class="pill u">${sc.total - sc.answered} Unanswered</span>
+      </div>
+    </div>`;
+  }
+
+  container.innerHTML = `
+    <div class="sec-hdr" style="background:${t.color}">
+      <h2>${t.title}</h2>
+      <p>${t.questions.mcq.length} MCQ + ${t.questions.tf.length} True/False + ${t.questions.fill.length} Fill-in-Blank + ${t.questions.flash.length} Flashcards</p>
+    </div>
+    ${scoreHtml}
+    <div class="tab-bar">${tabs}</div>
+    <div id="tab-content-area"></div>`;
+
+  renderTabContent(topicId, tab);
+}
+
+function switchTab(topicId, tab) {
+  state.currentTab = tab;
+  renderTopic(topicId);
+}
+
+function renderTabContent(topicId, tab) {
+  const area = document.getElementById('tab-content-area');
+  if(tab === 'mcq') area.innerHTML = renderMCQ(topicId);
+  else if(tab === 'tf') area.innerHTML = renderTF(topicId);
+  else if(tab === 'fill') area.innerHTML = renderFill(topicId);
+  else if(tab === 'flash') { area.innerHTML = renderFlash(topicId); initFlash(topicId); }
+}
+
+// ─── MCQ ─────────────────────────────────────────────────────────────────────
+function renderMCQ(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  const isSubmitted = state.submitted[`${topicId}_mcq`];
+  const letters = ['A','B','C','D'];
+  let html = '';
+  t.questions.mcq.forEach((q, i) => {
+    const k = `${topicId}_mcq_${i}`;
+    const saved = state.answers[k];
+    const userAns = saved ? saved.userAns : null;
+    html += `<div class="q-card">
+      <div class="q-num">Question ${i+1} of ${t.questions.mcq.length}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="opts">`;
+    q.opts.forEach((opt, j) => {
+      let cls = '';
+      if(isSubmitted) {
+        if(j === q.ans) cls = 'correct';
+        else if(j === userAns && j !== q.ans) cls = 'wrong';
+      } else if(j === userAns) cls = 'selected';
+      html += `<button class="opt-btn ${cls}" ${isSubmitted?'disabled':''} onclick="selectMCQ('${topicId}',${i},${j})">
+        <span class="opt-ltr">${letters[j]}</span>${opt}
+      </button>`;
+    });
+    html += `</div>`;
+    if(isSubmitted && saved && !saved.correct) {
+      html += `<div class="feedback wrong">Incorrect. Correct answer: ${letters[q.ans]}. ${q.opts[q.ans]}</div>`;
+    } else if(isSubmitted && saved && saved.correct) {
+      html += `<div class="feedback correct">Correct.</div>`;
+    }
+    html += `</div>`;
+  });
+  const allAnswered = t.questions.mcq.every((_,i) => state.answers[`${topicId}_mcq_${i}`]);
+  html += `<div class="submit-wrap">
+    <button class="submit-btn" id="mcq-submit-${topicId}" onclick="submitMCQ('${topicId}')" ${isSubmitted||!allAnswered?'disabled':''}>
+      ${isSubmitted ? 'Submitted' : 'Submit Answers'}
+    </button>
+    ${isSubmitted?`<button class="reset-btn" onclick="resetSection('${topicId}','mcq')">Reset</button>`:''}
+  </div>`;
+  return html;
+}
+
+function selectMCQ(topicId, qIdx, optIdx) {
+  if(state.submitted[`${topicId}_mcq`]) return;
+  const t = TOPICS.find(x=>x.id===topicId);
+  const correct = t.questions.mcq[qIdx].ans === optIdx;
+  ans(topicId, 'mcq', qIdx, optIdx, correct);
+  renderTabContent(topicId, 'mcq');
+}
+
+function submitMCQ(topicId) {
+  state.submitted[`${topicId}_mcq`] = true;
+  renderTabContent(topicId, 'mcq');
+  renderTopicScore(topicId);
+}
+
+// ─── T/F ─────────────────────────────────────────────────────────────────────
+function renderTF(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  const isSubmitted = state.submitted[`${topicId}_tf`];
+  let html = '';
+  t.questions.tf.forEach((q, i) => {
+    const k = `${topicId}_tf_${i}`;
+    const saved = state.answers[k];
+    const userAns = saved ? saved.userAns : null;
+    html += `<div class="q-card">
+      <div class="q-num">Statement ${i+1} of ${t.questions.tf.length}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="tf-btns">`;
+    ['True','False'].forEach(val => {
+      const boolVal = val === 'True';
+      let cls = '';
+      if(isSubmitted) {
+        if(boolVal === q.ans) cls = 'correct';
+        else if(boolVal === userAns && boolVal !== q.ans) cls = 'wrong';
+      } else if(userAns === boolVal) cls = 'selected';
+      html += `<button class="tf-btn ${cls}" ${isSubmitted?'disabled':''} onclick="selectTF('${topicId}',${i},${boolVal})">${val}</button>`;
+    });
+    html += `</div>`;
+    if(isSubmitted && saved && !saved.correct) {
+      html += `<div class="feedback wrong">Incorrect. This statement is ${q.ans ? 'TRUE' : 'FALSE'}.</div>`;
+    } else if(isSubmitted && saved && saved.correct) {
+      html += `<div class="feedback correct">Correct. This statement is ${q.ans ? 'TRUE' : 'FALSE'}.</div>`;
+    }
+    html += `</div>`;
+  });
+  const allAnswered = t.questions.tf.every((_,i) => state.answers[`${topicId}_tf_${i}`] !== undefined);
+  html += `<div class="submit-wrap">
+    <button class="submit-btn" onclick="submitTF('${topicId}')" ${isSubmitted||!allAnswered?'disabled':''}>
+      ${isSubmitted ? 'Submitted' : 'Submit Answers'}
+    </button>
+    ${isSubmitted?`<button class="reset-btn" onclick="resetSection('${topicId}','tf')">Reset</button>`:''}
+  </div>`;
+  return html;
+}
+
+function selectTF(topicId, qIdx, boolVal) {
+  if(state.submitted[`${topicId}_tf`]) return;
+  const t = TOPICS.find(x=>x.id===topicId);
+  const correct = t.questions.tf[qIdx].ans === boolVal;
+  ans(topicId, 'tf', qIdx, boolVal, correct);
+  renderTabContent(topicId, 'tf');
+}
+
+function submitTF(topicId) {
+  state.submitted[`${topicId}_tf`] = true;
+  renderTabContent(topicId, 'tf');
+  renderTopicScore(topicId);
+}
+
+// ─── FILL ─────────────────────────────────────────────────────────────────────
+function renderFill(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  const isSubmitted = state.submitted[`${topicId}_fill`];
+  let html = '';
+  t.questions.fill.forEach((q, i) => {
+    const k = `${topicId}_fill_${i}`;
+    const saved = state.answers[k];
+    const userVal = saved ? saved.userAns : '';
+    let cls = '';
+    if(isSubmitted && saved) cls = saved.correct ? 'correct' : 'wrong';
+    html += `<div class="q-card">
+      <div class="q-num">Fill in the Blank ${i+1} of ${t.questions.fill.length}</div>
+      <div class="q-text">${q.q}</div>
+      <input class="fill-input ${cls}" type="text" placeholder="Type your answer..." 
+        value="${userVal.replace(/"/g,'&quot;')}" 
+        ${isSubmitted?'disabled':''}
+        onchange="saveFill('${topicId}',${i},this.value)"
+        oninput="saveFill('${topicId}',${i},this.value)">`;
+    if(isSubmitted && saved && !saved.correct) {
+      html += `<div class="feedback wrong">Incorrect. Correct answer: "${q.ans}"</div>`;
+    } else if(isSubmitted && saved && saved.correct) {
+      html += `<div class="feedback correct">Correct.</div>`;
+    }
+    html += `</div>`;
+  });
+  html += `<div class="submit-wrap">
+    <button class="submit-btn" onclick="submitFill('${topicId}')" ${isSubmitted?'disabled':''}>
+      ${isSubmitted ? 'Submitted' : 'Submit Answers'}
+    </button>
+    ${isSubmitted?`<button class="reset-btn" onclick="resetSection('${topicId}','fill')">Reset</button>`:''}
+  </div>`;
+  return html;
+}
+
+function saveFill(topicId, qIdx, val) {
+  if(state.submitted[`${topicId}_fill`]) return;
+  const t = TOPICS.find(x=>x.id===topicId);
+  const q = t.questions.fill[qIdx];
+  const correct = val.trim().toLowerCase().split('/').map(s=>s.trim()).some(part =>
+    q.ans.toLowerCase().split('/').map(s=>s.trim()).some(a => a === part || part.includes(a) || a.includes(part))
+  );
+  // Store without re-rendering (to avoid losing cursor)
+  state.answers[`${topicId}_fill_${qIdx}`] = {userAns: val, correct};
+  updateProgress();
+}
+
+function submitFill(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  // Re-evaluate fill answers from DOM inputs
+  document.querySelectorAll('.fill-input').forEach((inp, i) => {
+    const val = inp.value;
+    saveFill(topicId, i, val);
+  });
+  state.submitted[`${topicId}_fill`] = true;
+  renderTabContent(topicId, 'fill');
+  renderTopicScore(topicId);
+}
+
+// ─── FLASHCARDS ───────────────────────────────────────────────────────────────
+function renderFlash(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  const idx = state.flashIndex[topicId] || 0;
+  const total = t.questions.flash.length;
+  const card = t.questions.flash[idx];
+  const flipped = state.flashFlipped[`${topicId}_${idx}`] || false;
+  return `
+    <div style="max-width:640px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:.8rem;color:var(--muted);font-weight:700">FLASHCARDS  -  ${t.title}</div>
+        <div style="font-size:.8rem;color:var(--muted)">Click card to reveal answer</div>
+      </div>
+      <div class="flash-wrap">
+        <div class="flash-card${flipped?' flipped':''}" onclick="flipCard('${topicId}',${idx})">
+          <div class="flash-face flash-front">
+            <div class="side">Question</div>
+            <div class="content">${card.q}</div>
+            <div class="hint">Click to flip</div>
+          </div>
+          <div class="flash-face flash-back">
+            <div class="side">Answer</div>
+            <div class="content" style="font-size:.9rem">${card.a}</div>
+          </div>
+        </div>
+      </div>
+      <div class="flash-progress"><div class="flash-progress-bar" style="width:${((idx+1)/total*100).toFixed(0)}%"></div></div>
+      <div class="flash-nav">
+        <button onclick="navFlash('${topicId}',-1)" ${idx===0?'disabled':''}>Previous</button>
+        <span class="flash-counter">${idx+1} / ${total}</span>
+        <button onclick="navFlash('${topicId}',1)" ${idx===total-1?'disabled':''}>Next</button>
+      </div>
+      <div style="text-align:center;margin-top:20px">
+        <button class="reset-btn" onclick="shuffleFlash('${topicId}')">Shuffle Cards</button>
+      </div>
+      <div style="margin-top:28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px">
+        ${t.questions.flash.map((_,fi) => `<button style="padding:6px;border:2px solid ${fi===idx?t.color:'var(--border)'};border-radius:6px;background:${fi===idx?t.color:'var(--card)'};color:${fi===idx?'#fff':'var(--muted)'};cursor:pointer;font-size:.75rem;font-weight:700" onclick="goFlash('${topicId}',${fi})">${fi+1}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function flipCard(topicId, idx) {
+  const k = `${topicId}_${idx}`;
+  state.flashFlipped[k] = !state.flashFlipped[k];
+  renderTabContent(topicId, 'flash');
+}
+function navFlash(topicId, dir) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  const cur = state.flashIndex[topicId] || 0;
+  const next = Math.max(0, Math.min(t.questions.flash.length-1, cur+dir));
+  state.flashIndex[topicId] = next;
+  renderTabContent(topicId, 'flash');
+}
+function goFlash(topicId, idx) {
+  state.flashIndex[topicId] = idx;
+  renderTabContent(topicId, 'flash');
+}
+function shuffleFlash(topicId) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  for(let i=t.questions.flash.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [t.questions.flash[i],t.questions.flash[j]]=[t.questions.flash[j],t.questions.flash[i]];
+  }
+  state.flashIndex[topicId] = 0;
+  renderTabContent(topicId, 'flash');
+}
+function initFlash(topicId) {
+  if(state.flashIndex[topicId] === undefined) state.flashIndex[topicId] = 0;
+}
+
+// ─── SCORE DISPLAY ────────────────────────────────────────────────────────────
+function renderTopicScore(topicId) {
+  const sc = topicScore(topicId);
+  if(!sc) return;
+  const existing = document.querySelector('.score-bar');
+  const html = `<div class="score-bar">
+    <span class="score-label">Section Score:</span>
+    <span class="score-val">${sc.correct} / ${sc.total}</span>
+    <div class="score-pills">
+      <span class="pill c">${sc.correct} Correct</span>
+      <span class="pill w">${sc.answered - sc.correct} Wrong</span>
+      <span class="pill u">${sc.total - sc.answered} Unanswered</span>
+    </div>
+  </div>`;
+  if(existing) { existing.outerHTML = html; }
+  renderNav();
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+function resetSection(topicId, type) {
+  const t = TOPICS.find(x=>x.id===topicId);
+  t.questions[type].forEach((_,i) => delete state.answers[`${topicId}_${type}_${i}`]);
+  delete state.submitted[`${topicId}_${type}`];
+  renderTabContent(topicId, type);
+  renderTopicScore(topicId);
+  updateProgress();
+}
+
+// ─── RESULTS ─────────────────────────────────────────────────────────────────
+function renderResults() {
+  const container = document.getElementById('page-results');
+  let totalC = 0, totalA = 0, grandTotal = 0;
+  TOPICS.forEach(t => {
+    const sc = topicScore(t.id);
+    totalC += sc.correct; totalA += sc.answered; grandTotal += sc.total;
+  });
+  const pct = grandTotal > 0 ? Math.round(totalC/grandTotal*100) : 0;
+
+  let topicCards = TOPICS.map(t => {
+    const sc = topicScore(t.id);
+    const tp = sc.answered > 0 ? Math.round(sc.correct/sc.total*100) : 0;
+    return `<div class="res-card">
+      <h4 style="border-bottom-color:${t.color}">${t.title}</h4>
+      <div class="res-row"><span class="lbl">Score</span><span class="val" style="color:${t.color}">${sc.correct} / ${sc.total}</span></div>
+      <div class="res-row"><span class="lbl">Answered</span><span class="val">${sc.answered} / ${sc.total}</span></div>
+      <div class="res-row"><span class="lbl">Percentage</span><span class="val">${tp}%</span></div>
+      <div class="res-row"><span class="lbl">Correct</span><span class="val" style="color:#065F46">${sc.correct}</span></div>
+      <div class="res-row"><span class="lbl">Wrong</span><span class="val" style="color:#991B1B">${sc.answered - sc.correct}</span></div>
+    </div>`;
+  }).join('');
+
+  // Wrong answers review
+  let wrongHtml = '';
+  TOPICS.forEach(t => {
+    const wrongs = [];
+    ['mcq','tf','fill'].forEach(type => {
+      t.questions[type].forEach((q,i) => {
+        const k = `${t.id}_${type}_${i}`;
+        const saved = state.answers[k];
+        if(saved && !saved.correct) {
+          let yourAns = '', correctAns = '';
+          if(type === 'mcq') {
+            yourAns = saved.userAns !== null ? q.opts[saved.userAns] : 'Not answered';
+            correctAns = q.opts[q.ans];
+          } else if(type === 'tf') {
+            yourAns = saved.userAns === true ? 'True' : 'False';
+            correctAns = q.ans ? 'True' : 'False';
+          } else {
+            yourAns = saved.userAns || 'Not answered';
+            correctAns = q.ans;
+          }
+          wrongs.push({q: q.q, yourAns, correctAns, type});
+        }
+      });
+    });
+    if(wrongs.length > 0) {
+      wrongHtml += `<div class="wrong-review">
+        <h4>${t.title} — ${wrongs.length} incorrect</h4>
+        ${wrongs.map(w => `<div class="wr-item">
+          <div class="wr-q">${w.q}</div>
+          <div class="wr-yours">Your answer: ${w.yourAns}</div>
+          <div class="wr-correct">Correct answer: ${w.correctAns}</div>
+        </div>`).join('')}
+      </div>`;
+    }
+  });
+  if(!wrongHtml) wrongHtml = `<div style="background:#D1FAE5;border-radius:10px;padding:20px;text-align:center;color:#065F46;font-weight:700">No incorrect answers to review. Well done.</div>`;
+
+  container.innerHTML = `
+    <button class="back-btn" onclick="navigateTo('${TOPICS[0].id}')">Back to Topics</button>
+    <div class="results-hdr">
+      <h2>Overall Results</h2>
+      <div class="results-total">${totalC} / ${grandTotal}</div>
+      <div style="font-size:1.5rem;font-weight:800;color:${pct>=70?'#065F46':'#991B1B'};margin-top:4px">${pct}%</div>
+      <div class="results-sub">${totalA} of ${grandTotal} questions answered</div>
+    </div>
+    <div class="results-grid">${topicCards}</div>
+    <h3 style="font-size:1rem;font-weight:800;margin-bottom:16px;color:#1F3864">Incorrect Answers — Review</h3>
+    ${wrongHtml}`;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderNav();
+updateProgress();
+</script>
+</body>
+</html>
